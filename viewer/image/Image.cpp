@@ -141,7 +141,7 @@ Result<bool> Image::storePFM(std::string const& path) const
     file.write_header(pfm::color_format, width(), height(), pfm::host_byte_order, 1.0);
 
     std::unique_ptr<pfm::color_pixel[]> scanline(new pfm::color_pixel[width()]);
-    for (int y = 0; y < height(); ++y) {
+    for (int y = height() - 1; y >= 0; --y) {
       for (int x = 0; x < width(); ++x) {
         scanline[x][0] = value(x, y, 0);
         scanline[x][1] = value(x, y, 1);
@@ -222,7 +222,7 @@ Result<bool> Image::storePIC(std::string const& path) const
     file.write_resolution_string(pic::neg_y_pos_x, width(), height());
 
     std::unique_ptr<pic::pixel[]> scanline(new pic::pixel[width()]);
-    for (int y = height() - 1; y >= 0; --y) {
+    for (int y = 0; y < height(); ++y) {
       for (int x = 0; x < width(); ++x) {
         pic::rgb_to_rgbe(value(x, y, 0), value(x, y, 1), value(x, y, 2),
           scanline[x][0], scanline[x][1], scanline[x][2], scanline[x][3]);
