@@ -55,7 +55,7 @@ void ImageArea::sync()
     renderer_->setRenderRegion(calculateRenderRegion(window()->size(), pos, width(), height(), ratio));
     renderer_->setClearColor(color_);
     renderer_->updateImages(images_->vector());
-    renderer_->setCurrent(img.image());
+    renderer_->setCurrent(img.image(), img.layer());
     renderer_->setSettings({ QVector2D(img.position()), img.scale(), (float)img.brightness(), (float)img.gamma() });
     renderer_->setComparison(img.comparison());
   }

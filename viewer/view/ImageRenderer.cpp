@@ -29,11 +29,11 @@ std::unique_ptr<QOpenGLShaderProgram> createProgram()
 
 namespace hdrv {
 
-QOpenGLTexture::TextureFormat format(Image const& image)
+QOpenGLTexture::TextureFormat format(Image const& image, int layer)
 {
-  switch (image.format()) {
+  switch (image.format(layer)) {
     case Image::Float: {
-      switch (image.channels()) {
+      switch (image.channels(layer)) {
         case 1: return QOpenGLTexture::R32F;
         case 3: return QOpenGLTexture::RGB32F;
         case 4: return QOpenGLTexture::RGBA32F;
@@ -41,7 +41,7 @@ QOpenGLTexture::TextureFormat format(Image const& image)
       }
     }
     case Image::Byte: {
-      switch (image.channels()) {
+      switch (image.channels(layer)) {
         case 1: return QOpenGLTexture::R8_UNorm;
         case 3: return QOpenGLTexture::RGBFormat;
         case 4: return QOpenGLTexture::RGBAFormat;
@@ -52,35 +52,35 @@ QOpenGLTexture::TextureFormat format(Image const& image)
   }
 }
 
-QOpenGLTexture::PixelFormat pixelFormat(Image const& image)
+QOpenGLTexture::PixelFormat pixelFormat(Image const& image, int layer)
 {
-  switch (image.channels()) {
+  switch (image.channels(layer)) {
     case 1: return QOpenGLTexture::Luminance;
     case 3: return QOpenGLTexture::RGB;
     case 4: return QOpenGLTexture::RGBA;
     default:
-      qWarning() << "Cannot render image with " << image.channels() << " channels.";
+      qWarning() << "Cannot render image with " << image.channels(layer) << " channels.";
       return QOpenGLTexture::Luminance;
   }
 }
 
-QOpenGLTexture::PixelType pixelType(Image const& image)
+QOpenGLTexture::PixelType pixelType(Image const& image, int layer)
 {
-  return image.format() == Image::Float ? QOpenGLTexture::PixelType::Float32 : QOpenGLTexture::PixelType::UInt8;
+  return image.format(layer) == Image::Float ? QOpenGLTexture::PixelType::Float32 : QOpenGLTexture::PixelType::UInt8;
 }
 
-std::unique_ptr<QOpenGLTexture> createTexture(Image const& image)
+std::unique_ptr<QOpenGLTexture> createTexture(Image const& image, int layer)
 {
   auto texture = std::make_unique<QOpenGLTexture>(QOpenGLTexture::Target2D);
   texture->setSize(image.width(), image.height());
-  texture->setFormat(format(image));
-  texture->allocateStorage(pixelFormat(image), pixelType(image));
-  texture->setData(pixelFormat(image), pixelType(image), image.data());
+  texture->setFormat(format(image, layer));
+  texture->allocateStorage(pixelFormat(image, layer), pixelType(image, layer));
+  texture->setData(pixelFormat(image, layer), pixelType(image, layer), image.data(layer));
   texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
   texture->setMagnificationFilter(QOpenGLTexture::Nearest);
   texture->setWrapMode(QOpenGLTexture::ClampToBorder);
   texture->generateMipMaps();
-  if (image.channels() == 1) {
+  if (image.channels(layer) == 1) {
     texture->setSwizzleMask(QOpenGLTexture::RedValue, QOpenGLTexture::RedValue,
                             QOpenGLTexture::RedValue, QOpenGLTexture::OneValue);
   }
@@ -103,8 +103,8 @@ void ImageRenderer::updateImages(std::vector<ImageDocument *> const& images)
   // Erase textures for images that no longer exist
   for (auto iter = textures_.begin(); iter != textures_.end(); ) {
     auto matchImage = [iter](ImageDocument * doc) {
-      return doc->image() == iter->first
-        || (doc->comparison() && doc->comparison()->image == iter->first);
+      return doc->image() == iter->first.first
+        || (doc->comparison() && doc->comparison()->image == iter->first.first);
     };
     if (std::find_if(images.begin(), images.end(), matchImage) == images.end()) {
       textures_.erase(iter++);
@@ -114,9 +114,11 @@ void ImageRenderer::updateImages(std::vector<ImageDocument *> const& images)
   }
   // Create textures for new images
   auto createTextureFor = [this](std::shared_ptr<Image> const& image) {
-    auto & tex = textures_[image];
-    if (!tex) {
-      tex = createTexture(*image);
+    for (int layer = 0; layer < image->layerCount(); ++layer) {
+      auto & tex = textures_[std::make_pair(image, layer)];
+      if (!tex) {
+        tex = createTexture(*image, layer);
+      }
     }
   };
   for (auto doc : images) {
@@ -140,7 +142,7 @@ void ImageRenderer::paint()
 
   auto const& region = renderRegion_;
   auto const& image = *current_;
-  auto & texture = *textures_[current_];
+  auto & texture = *textures_[std::make_pair(current_, layer_)];
   QVector2D regionSize(float(region.size.width()), float(region.size.height()));
   QVector2D imageSize(float(image.width()) * settings_.scale, float(image.height()) * settings_.scale);
 
@@ -151,9 +153,9 @@ void ImageRenderer::paint()
   program_->setUniformValue("scale", textureScale(regionSize, imageSize));
   program_->setUniformValue("regionSize", regionSize);
   program_->setUniformValue("brightness", std::pow(2.0f, settings_.brightness));
-  program_->setUniformValue("gamma", current_->format() == Image::Float ? 1.0f / settings_.gamma : 1.0f);
+  program_->setUniformValue("gamma", current_->format(layer_) == Image::Float ? 1.0f / settings_.gamma : 1.0f);
   if (comparison_) {
-    textures_[comparison_->image]->bind(1);
+    textures_[std::make_pair(comparison_->image, 0)]->bind(1); // todo, enable layered comparisons
     program_->setUniformValue("comparison", 1);
     program_->setUniformValue("mode", (int)comparison_->mode);
     program_->setUniformValue("separator", comparison_->separator);

@@ -31,6 +31,14 @@ class Image
 public:
   enum Format { Byte, Float };
 
+  struct Layer
+  {
+    std::string name;
+    std::vector<std::string> channels;
+    Format format;
+    std::vector<uint8_t> data;
+  };
+
   static Image makeEmpty();
 
   static Result<Image> loadPFM(std::string const& path);
@@ -44,27 +52,29 @@ public:
 
   int width() const { return width_; }
   int height() const { return height_; }
-  int channels() const { return channels_; }
-  int pixelSizeInBytes() const { return format_ == Byte ? sizeof(uint8_t) : sizeof(float); }
-  int sizeInBytes() const { return width_ * height_ * channels_ * pixelSizeInBytes(); }
-  Format format() const { return format_; }
-  uint8_t const* data() const { return data_.data(); }
-  float value(int x, int y, int channel) const;
+  int channels(int layer) const { return (int)layers_.at(layer).channels.size(); }
+  int pixelSizeInBytes(int layer) const { return layers_.at(layer).format == Byte ? sizeof(uint8_t) : sizeof(float); }
+  int sizeInBytes(int layer) const { return (int)(width_ * height_ * layers_.at(layer).channels.size() * pixelSizeInBytes(layer)); }
+  Format format(int layer) const { return layers_.at(layer).format; }
+  uint8_t const* data(int layer) const { return layers_.at(layer).data.data(); }
+  float value(int x, int y, int channel, int layer) const;
+  size_t layerCount() const { return layers_.size(); }
+  std::string const& layerName(int layer) { return layers_.at(layer).name; }
+  std::string const& channelName(int layer, int channel) { return layers_.at(layer).channels.at(channel); }
 
-  Result<bool> storePFM(std::string const& path) const;
-  Result<bool> storePIC(std::string const& path) const;
-  Result<bool> storeEXR(std::string const& path) const;
+  Result<bool> storePFM(std::string const& path, int layer) const;
+  Result<bool> storePIC(std::string const& path, int layer) const;
+  Result<bool> storeEXR(std::string const& path, int layer) const;
 
   Result<Image> scaleByHalf() const;
 
   Image(int w, int h, int c, Format f, std::vector<uint8_t>&& data);
+  Image(int w, int h, std::vector<Layer>&& layers);
 
 private:
   int width_;
   int height_;
-  int channels_;
-  Format format_;
-  std::vector<uint8_t> data_;
+  std::vector<Layer> layers_;
 };
 
 }

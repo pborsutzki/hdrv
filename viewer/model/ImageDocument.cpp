@@ -105,6 +105,24 @@ void ImageDocument::resetError()
   emit errorTextChanged();
 }
 
+QStringList ImageDocument::layers() const
+{
+  QStringList result;
+  for (int i = 0; i < image_->layerCount(); ++i) {
+    result.push_back(QString::fromStdString(image_->layerName(i)));
+  }
+  return result;
+}
+
+void ImageDocument::setLayer(int layer)
+{
+  if (layer != layer_) {
+    layer_ = layer;
+    emit layerChanged();
+    emit propertyChanged();
+  }
+}
+
 void ImageDocument::setError(QString const& errorText, ErrorCategory category)
 {
   errorText_[static_cast<int>(category)] = errorText;
@@ -181,11 +199,11 @@ void ImageDocument::store(QUrl const& url)
 {
   QFileInfo file(url.toLocalFile());
   if (file.suffix() == "hdr" || file.suffix() == "pic") {
-    check(image()->storePIC(file.absoluteFilePath().toStdString()), ErrorCategory::Generic);
+    check(image()->storePIC(file.absoluteFilePath().toStdString(), layer_), ErrorCategory::Generic);
   } else if (file.suffix() == "pfm" || file.suffix() == "ppm") {
-    check(image()->storePFM(file.absoluteFilePath().toStdString()), ErrorCategory::Generic);
+    check(image()->storePFM(file.absoluteFilePath().toStdString(), layer_), ErrorCategory::Generic);
   } else if (file.suffix() == "exr") {
-    check(image()->storeEXR(file.absoluteFilePath().toStdString()), ErrorCategory::Generic);
+    check(image()->storeEXR(file.absoluteFilePath().toStdString(), layer_), ErrorCategory::Generic);
   } else {
     setError("Unsupported file extension: " + file.suffix(), ErrorCategory::Generic);
   }
@@ -194,13 +212,13 @@ void ImageDocument::store(QUrl const& url)
 QVector4D ImageDocument::pixelValue() const
 {
   QVector4D texel;
-  texel.setX(image_->value(pixelPosition_.x(), pixelPosition_.y(), 0));
+  texel.setX(image_->value(pixelPosition_.x(), pixelPosition_.y(), 0, layer_));
   if (channels() > 1) {
-    texel.setY(image_->value(pixelPosition_.x(), pixelPosition_.y(), 1));
+    texel.setY(image_->value(pixelPosition_.x(), pixelPosition_.y(), 1, layer_));
     if (channels() > 2) {
-      texel.setZ(image_->value(pixelPosition_.x(), pixelPosition_.y(), 2));
+      texel.setZ(image_->value(pixelPosition_.x(), pixelPosition_.y(), 2, layer_));
       if (channels() > 3) {
-        texel.setW(image_->value(pixelPosition_.x(), pixelPosition_.y(), 3));
+        texel.setW(image_->value(pixelPosition_.x(), pixelPosition_.y(), 3, layer_));
       }
     }
   }

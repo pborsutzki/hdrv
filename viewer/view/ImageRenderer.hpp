@@ -31,12 +31,12 @@ class ImageRenderer : public QObject, protected QOpenGLFunctions
   Q_OBJECT
 
 public:
-  using ImageTextures = std::map<std::shared_ptr<Image>, std::unique_ptr<QOpenGLTexture>>;
+  using ImageTextures = std::map<std::pair<std::shared_ptr<Image>, int>, std::unique_ptr<QOpenGLTexture>>;
 
   void setRenderRegion(RenderRegion region) { renderRegion_ = region; }
   void setClearColor(QColor color) { clearColor_ = color; }
   void setSettings(ImageSettings settings) { settings_ = settings; }
-  void setCurrent(std::shared_ptr<Image> const& image) { current_ = image; }
+  void setCurrent(std::shared_ptr<Image> const& image, int layer) { current_ = image; layer_ = layer; }
   void setComparison(boost::optional<ImageComparison> const& c) { comparison_ = c; }
   void updateImages(std::vector<ImageDocument *> const& images);
 
@@ -51,6 +51,7 @@ private:
   std::shared_ptr<Image> current_;
   boost::optional<ImageComparison> comparison_;
   std::unique_ptr<QOpenGLShaderProgram> program_;
+  int layer_;
 };
 
 }

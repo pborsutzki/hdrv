@@ -38,6 +38,9 @@ class ImageDocument : public QObject
   Q_PROPERTY(bool isComparison READ isComparison NOTIFY isComparisonChanged)
   Q_PROPERTY(ComparisonMode comparisonMode READ comparisonMode WRITE setComparisonMode NOTIFY comparisonModeChanged)
   Q_PROPERTY(float comparisonSeparator READ comparisonSeparator WRITE setComparisonSeparator NOTIFY comparisonSeparatorChanged)
+  Q_PROPERTY(bool isMultilayered READ isMultilayered NOTIFY propertyChanged)
+  Q_PROPERTY(QStringList layers READ layers NOTIFY propertyChanged)
+  Q_PROPERTY(int layer READ layer WRITE setLayer NOTIFY layerChanged)
 
 public:
   enum class ComparisonMode { Difference, SideBySide };
@@ -67,16 +70,16 @@ public:
   int width() const { return image_->width();  }
   int height() const { return image_->height(); }
   QSize size() const { return QSize(image_->width(), image_->height()); }
-  int channels() const { return image_->channels(); }
+  int channels() const { return image_->channels(layer_); }
   float scale() const { return scale_; }
   qreal brightness() const { return brightness_; }
   qreal minBrightness() const { return -10.0; }
   qreal maxBrightness() const { return 10.0; }
-  qreal gamma() const { return image_->format() == Image::Float ? gamma_ : 2.2; }
+  qreal gamma() const { return image_->format(layer_) == Image::Float ? gamma_ : 2.2; }
   qreal minGamma() const { return 1.0; }
   qreal maxGamma() const { return 8.0; }
-  bool isFloat() const { return image_->format() == Image::Float; }
-  void const* pixels() const { return image_->data(); }
+  bool isFloat() const { return image_->format(layer_) == Image::Float; }
+  void const* pixels() const { return image_->data(layer_); }
   std::shared_ptr<Image> const& image() { return image_; }
   QPoint pixelPosition() const { return pixelPosition_; }
   QVector4D pixelValue() const;
@@ -85,6 +88,9 @@ public:
   boost::optional<Comparison> const& comparison() const { return comparison_; }
   ComparisonMode comparisonMode() const { return comparison_.value_or(Comparison()).mode; }
   float comparisonSeparator() const { return comparison_.value_or(Comparison()).separator; }
+  bool isMultilayered() const { return image_->layerCount() > 1; }
+  QStringList layers() const;
+  int layer() const { return layer_; }
 
   enum class ErrorCategory { Image, Comparison, Generic };
   void setError(QString const& errorText, ErrorCategory category);
@@ -97,6 +103,7 @@ public:
   void setCurrentPixel(QPoint index);
   void setComparisonMode(ComparisonMode mode);
   void setComparisonSeparator(float value);
+  void setLayer(int layer);
 
   Q_INVOKABLE void resetError();
   Q_INVOKABLE void store(QUrl const& url);
@@ -115,6 +122,7 @@ signals:
   void comparisonModeChanged();
   void comparisonSeparatorChanged();
   void fileTypeChanged();
+  void layerChanged();
 
 private:
   typedef std::shared_ptr<Result<Image>> LoadResult;
@@ -144,6 +152,7 @@ private:
   boost::optional<Comparison> comparison_;
   QFutureWatcher<LoadResult>* watcher_ = nullptr;
   QFutureWatcher<LoadResult>* comparisonWatcher_ = nullptr;
+  int layer_ = 0;
 };
 
 using ImageComparison = ImageDocument::Comparison;

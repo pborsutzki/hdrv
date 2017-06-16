@@ -91,6 +91,17 @@ Rectangle {
       }
       visible: images.current.isFloat
     }
+    
+    Text { text: 'Layer:'; visible: images.current.isMultilayered }
+    ComboBox {
+      id: layerSelect
+      Layout.fillWidth: true
+      Layout.minimumHeight: scaleText.height
+      model: images.current.layers
+      onCurrentIndexChanged: images.current.layer = layerSelect.currentIndex
+      currentIndex: images.current.layer
+      visible: images.current.isMultilayered
+    }
 
     Text {
       text: '<b>Comparison</b>'
@@ -240,7 +251,7 @@ Rectangle {
         property string formatType: 'normal'
         text: 'Normal'
         exclusiveGroup: channelFormat
-        visible: image.current.channels >= 3
+        visible: images.current.channels >= 3
       }
     }
   }

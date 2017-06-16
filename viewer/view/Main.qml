@@ -260,5 +260,25 @@ ApplicationWindow {
         }
       }
     }
+    
+    Shortcut {
+      sequence: 'L'
+      context: Qt.ApplicationShortcut
+      onActivated: {
+        if(images.current.isMultilayered && (images.current.layers.length > images.current.layer + 1)) {
+          images.current.layer = images.current.layer+1;
+        }
+      }
+    }
+    
+    Shortcut {
+      sequence: 'K'
+      context: Qt.ApplicationShortcut
+      onActivated: {
+        if(images.current.isMultilayered && (images.current.layer - 1 >= 0)) {
+          images.current.layer = images.current.layer-1;
+        }
+      }
+    }
   }
 }

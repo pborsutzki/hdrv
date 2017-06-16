@@ -89,6 +89,7 @@ IFACEMETHODIMP ThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
   WTS_ALPHATYPE *pdwAlpha)
 {
   HRESULT hr = E_OUTOFMEMORY;
+  const int layer = 0;
 
   hdrv::Result<hdrv::Image> img = hdrv::Result<hdrv::Image>("Unsupported image format");
 
@@ -136,7 +137,7 @@ IFACEMETHODIMP ThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
   {
     hr = S_OK;
     *phbmp = hbmp;
-    *pdwAlpha = (pic.channels() > 3) ? WTSAT_ARGB : WTSAT_RGB;
+    *pdwAlpha = (pic.channels(layer) > 3) ? WTSAT_ARGB : WTSAT_RGB;
 
     // Simple gamma correction, clamping and 8 bit conversion
     // (will break on negative input, e.g. normal maps)
@@ -152,10 +153,10 @@ IFACEMETHODIMP ThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 
         uint8_t r = 0, g = 0, b = 0, a = 255;
 
-        r = g = b = gamma(pic.value(x, y, 0));
-        if (pic.channels() > 1) g = gamma(pic.value(x, y, 1));
-        if (pic.channels() > 2) b = gamma(pic.value(x, y, 2));
-        if (pic.channels() > 3) a = gamma(pic.value(x, y, 3));
+        r = g = b = gamma(pic.value(x, y, 0, layer));
+        if (pic.channels(layer) > 1) g = gamma(pic.value(x, y, 1, layer));
+        if (pic.channels(layer) > 2) b = gamma(pic.value(x, y, 2, layer));
+        if (pic.channels(layer) > 3) a = gamma(pic.value(x, y, 3, layer));
 
         pBits[linestride * y + pixelstride * x + 0] = b;
         pBits[linestride * y + pixelstride * x + 1] = g;
